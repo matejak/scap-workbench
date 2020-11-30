@@ -645,7 +645,7 @@ QString TailoringWindow::getQSettingsKey() const
 void TailoringWindow::deserializeCollapsedItems()
 {
     const QStringList list = mQSettings->value(getQSettingsKey()).toStringList();
-    mCollapsedItemIds = QSet<QString>::fromList(list);
+    mCollapsedItemIds = QSet<QString>(list.begin(), list.end());
 }
 
 void TailoringWindow::serializeCollapsedItems()
@@ -657,7 +657,7 @@ void TailoringWindow::serializeCollapsedItems()
     }
     else
     {
-        mQSettings->setValue(getQSettingsKey(), QVariant(mCollapsedItemIds.toList()));
+        mQSettings->setValue(getQSettingsKey(), QVariant(mCollapsedItemIds.values()));
         mQSettings->setValue(getQSettingsKey() + "_lastUsed", QVariant(QDateTime::currentDateTime()));
     }
 }

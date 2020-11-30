@@ -86,7 +86,7 @@ void SaveAsRPMDialog::slotFinished(int result)
     closure.remove(mScanningSession->getOpenedFilePath());
     QList<QString> closureOrdered;
     closureOrdered.append(mScanningSession->getOpenedFilePath());
-    closureOrdered.append(closure.toList());
+    closureOrdered.append(closure.values());
 
     const QDir cwd = ScanningSession::getCommonAncestorDirectory(closure);
 
