@@ -18,6 +18,11 @@
 
 set -u -o pipefail
 
+die () {
+    echo "$1" >&2
+    exit "$2"
+}
+
 trap "" SIGHUP SIGINT
 
 # pkexec writes a message to stderr when user dismisses it, we always skip 1 line.
@@ -30,18 +35,18 @@ shift
 wrapper_gid=$1
 shift
 
-real_uid=`id -u`
-real_gid=`id -g`
+real_uid=$(id -u)
+real_gid=$(id -g)
 
-TEMP_DIR=`mktemp -d`
+TEMP_DIR=$(mktemp -d)
 
 args=("$@")
 
 # We have to rewrite result targets to a priv temp dir. We will later
 # chown that dir to the target uid:gid and copy things where they belong
 # using permissions of that user ONLY!
-for i in $(seq 0 `expr $# - 1`); do
-    let j=i+1
+for i in "${!args[@]}"; do
+    j=$((i + 1))
 
     case "${args[i]}" in
     ("--results")
@@ -63,16 +68,17 @@ done
 
 LOCAL_OSCAP="oscap"
 
-pushd "$TEMP_DIR" > /dev/null
+original_workdir=$(pwd)
+pushd "$TEMP_DIR" > /dev/null || die "Unable to change working directory to '$TEMP_DIR'" "$?"
 $LOCAL_OSCAP "${args[@]}" &
 PID=$!
 RET=1
 
 while kill -0 $PID 2> /dev/null; do
     # check if the stdin is still available but return in one second
-    read -t 1 dummy
+    read -t 1 unused_dummy
     ret=$?
-    if [ 0 -lt $ret -a $ret -lt 128 ]; then
+    if [ 0 -lt $ret ] && [ $ret -lt 128 ]; then
         # If read failed & it was not due to timeout --> parents are gone.
         kill -s SIGTERM $PID 2> /dev/null
         break
@@ -82,7 +88,7 @@ done
 wait $PID
 RET=$?
 
-popd > /dev/null
+popd > /dev/null || die "Unable to change return to the original working directory '$original_workdir''." "$?"
 
 function chown_copy
 {
@@ -92,8 +98,8 @@ function chown_copy
     [ ! -f "$what" ] || cp "$what" "$where"
 
     # chown only required if wrapper_{uid,gid} differs from real_{uid,gid}
-    if [ $wrapper_uid -ne $real_uid ] || [ $wrapper_gid -ne $real_gid ]; then
-        chown $wrapper_uid:$wrapper_gid "$where"
+    if [ "$wrapper_uid" -ne "$real_uid" ] || [ "$wrapper_gid" -ne "$real_gid" ]; then
+        chown "$wrapper_uid:$wrapper_gid" "$where"
     fi
 }
 
