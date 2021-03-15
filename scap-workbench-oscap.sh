@@ -23,7 +23,9 @@ die () {
     exit "$2"
 }
 
-trap "" SIGHUP SIGINT
+trap "" SIGHUP
+# Kill all descendants of the script - see https://stackoverflow.com/a/2173421/592892
+trap 'trap - SIGTERM && kill -- -$$' SIGINT SIGTERM
 
 # pkexec writes a message to stderr when user dismisses it, we always skip 1 line.
 # if user did not dismiss it we should print a dummy line to stderr so that nothing
